@@ -1,4 +1,6 @@
 dst := IP
+CONFIG ?= fpga$(board)
+export RASTERIX ?= 0
 
 all: ArtyA7
 
@@ -46,10 +48,18 @@ nexysvideo: export SYSTEMCLOCK := 20000000
 nexysvideo: export MAXSDCCLOCK  :=  5000000
 nexysvideo: FPGA_NEXYSVIDEO
 
-# variables computed from config
-EXT_MEM_BASE = $(shell grep 'EXT_MEM_BASE' ../../config/deriv/fpga$(board)/config.vh | sed 's/.*=.*h\([[:alnum:]]*\);/0x\1/g')
+.PHONY: nexysvideo-rasterix
+nexysvideo-rasterix:
+	$(MAKE) RASTERIX=1 CONFIG=fpganexysvideo_rasterix nexysvideo
 
-EXT_MEM_RANGE = $(shell grep 'EXT_MEM_RANGE' ../../config/deriv/fpga$(board)/config.vh | sed 's/.*=.*h\([[:alnum:]]*\);/\1/g' | sed 's/\(.*\)/base=16;\1+1/g' | bc | sed 's/\(.*\)/0x\1/g')
+ifeq ($(RASTERIX),1)
+IP_NEXYSVIDEO: $(dst)/axiscdc.log $(dst)/videoclock.log
+endif
+
+# variables computed from config
+EXT_MEM_BASE = $(shell grep 'EXT_MEM_BASE' ../../config/deriv/$(CONFIG)/config.vh | sed 's/.*=.*h\([[:alnum:]]*\);/0x\1/g')
+
+EXT_MEM_RANGE = $(shell grep 'EXT_MEM_RANGE' ../../config/deriv/$(CONFIG)/config.vh | sed 's/.*=.*h\([[:alnum:]]*\);/\1/g' | sed 's/\(.*\)/base=16;\1+1/g' | bc | sed 's/\(.*\)/0x\1/g')
 
 
 .PHONY: FPGA_Arty FPGA_VCU FPGA_NEXYSVIDEO
@@ -122,7 +132,7 @@ PreProcessFiles:
 	cp -r ../../addins/verilog-ethernet/*/*.sv ../src/CopiedFiles_do_not_add_to_repo/rvvi
 	cp -r ../../addins/verilog-ethernet/*/*/*/*.sv ../src/CopiedFiles_do_not_add_to_repo/rvvi
 	mkdir ../src/CopiedFiles_do_not_add_to_repo/config/
-	cp ../../config/deriv/fpga$(board)/config.vh ../src/CopiedFiles_do_not_add_to_repo/config/
+	cp ../../config/deriv/$(CONFIG)/config.vh ../src/CopiedFiles_do_not_add_to_repo/config/
 	./insert_debug_comment.sh
 	# This line allows the Bootloader to be loaded in a Block RAM on the FPGA
 	sed -i "s/bit \[DATA_WIDTH-1:0\].*ROM.*/(\* rom_style=\"block\" \*) &/g" ../src/CopiedFiles_do_not_add_to_repo/generic/mem/rom1p1r.sv

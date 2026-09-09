@@ -274,7 +274,10 @@ module fpgaTop #(parameter logic RVVI_SYNTH_SUPPORTED = 0)
 
   // Wally
   wallypipelinedsoc  #(P)
-  wallypipelinedsoc(.clk(CPUCLK), .reset_ext(bus_struct_reset), .reset(),
+  wallypipelinedsoc(
+    .PSELEXT(), .PENABLEEXT(), .PWRITEEXT(), .PADDREXT(), .PWDATAEXT(), .PSTRBEXT(),
+    .PRDATAEXT('0), .PREADYEXT(1'b1),
+    .clk(CPUCLK), .reset_ext(bus_struct_reset), .reset(),
                     .HRDATAEXT, .HREADYEXT, .HRESPEXT, .HSELEXT,
                     .HCLK(HCLKOpen), .HRESETn(HRESETnOpen),
                     .HADDR, .HWDATA, .HWSTRB, .HWRITE, .HSIZE, .HBURST, .HPROT,

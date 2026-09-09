@@ -189,6 +189,11 @@ localparam logic [63:0] SDC_RANGE        = 64'h00000FFF;
 localparam logic SPI_SUPPORTED = 1;
 localparam logic [63:0] SPI_BASE         = 64'h10040000;
 localparam logic [63:0] SPI_RANGE        = 64'h00000FFF;
+// External APB peripherals
+localparam logic EXT_IO_SUPPORTED = 0;
+localparam logic [63:0] EXT_IO_BASE = 64'h10080000;
+localparam logic [63:0] EXT_IO_RANGE = 64'h000000FF;
+
 localparam logic PWM_SUPPORTED = 1;
 localparam logic [63:0] PWM_BASE         = 64'h10020000;
 localparam logic [63:0] PWM_RANGE        = 64'h000000FF;

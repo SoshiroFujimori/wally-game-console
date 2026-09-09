@@ -59,6 +59,32 @@ add_files [glob -type f  ../src/CopiedFiles_do_not_add_to_repo/*/*.sv ../src/Cop
 set_property include_dirs {../src/CopiedFiles_do_not_add_to_repo/config ../../config/shared} [current_fileset]
 
 
+# The same board option selects IP dependencies and the top-level hardware.
+set rasterixEnabled $::env(RASTERIX)
+if {$rasterixEnabled} {
+    if {$board != "nexysvideo"} {error "RasterIX requires the Nexys Video board"}
+    set configFile [open ../src/CopiedFiles_do_not_add_to_repo/config/config.vh r]
+    set externalAPB [regexp {EXT_IO_SUPPORTED\s*=\s*1;} [read $configFile]]
+    close $configFile
+    if {!$externalAPB} {error "RasterIX requires EXT_IO_SUPPORTED in the selected configuration"}
+    set_property generic {RASTERIX_SUPPORTED=1} [current_fileset]
+    add_files {../src/rasterix.sv ../src/rasterix_apb.sv ../src/rasterixdisplay.sv}
+    import_ip IP/axiscdc.srcs/sources_1/ip/axiscdc/axiscdc.xci
+    import_ip IP/videoclock.srcs/sources_1/ip/videoclock/videoclock.xci
+    add_files -fileset constrs_1 ../constraints/constraints-rasterixdisplay.xdc
+    set_property SCOPED_TO_REF rasterixdisplay [get_files constraints-rasterixdisplay.xdc]
+    set rasterixRoot ../../addins/rasterix/rtl
+    add_files [glob $rasterixRoot/RasterIX/*.v $rasterixRoot/Float/rtl/float/*.v \
+        $rasterixRoot/3rdParty/verilog-axi/*.v $rasterixRoot/3rdParty/verilog-axis/*.v \
+        $rasterixRoot/3rdParty/core_dvi_framebuffer/src_v/*.v]
+    add_files [list $rasterixRoot/3rdParty/sfifo.v $rasterixRoot/3rdParty/skidbuffer.v]
+    set_property include_dirs [concat [get_property include_dirs [current_fileset]] \
+        [list $rasterixRoot/RasterIX $rasterixRoot/3rdParty/core_dvi_framebuffer/src_v]] [current_fileset]
+    # Keep the upstream AXI utility modules separate from the RVVI dependency.
+    set_property library rasterix [get_files -all -filter {NAME =~ *addins/rasterix/*}]
+    source rasterixmem.tcl
+}
+
 # define top level
 set_property top fpgaTop [current_fileset]
 
@@ -126,6 +152,11 @@ if {$board=="ArtyA7"} {
 # set for RuntimeOptimized implementation
 #set_property "steps.place_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
 #set_property "steps.route_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
+
+if {$rasterixEnabled} {
+    # Spread the renderer and CPU logic to reduce routing congestion.
+    set_property STEPS.PLACE_DESIGN.ARGS.DIRECTIVE AltSpreadLogic_high [get_runs impl_1]
+}
 
 if {$board=="nexysvideo"} {
     set_property STEPS.POST_ROUTE_PHYS_OPT_DESIGN.IS_ENABLED true [get_runs impl_1]

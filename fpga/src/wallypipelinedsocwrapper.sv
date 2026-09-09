@@ -62,7 +62,10 @@ module wallypipelinedsocwrapper (
 );
   `include "parameter-defs.vh"
 
-  wallypipelinedsoc  #(P) wallypipelinedsoc(.clk, .reset_ext, .reset, .HRDATAEXT,.HREADYEXT, .HRESPEXT, .HSELEXT,
+  wallypipelinedsoc  #(P) wallypipelinedsoc(
+    .PSELEXT(), .PENABLEEXT(), .PWRITEEXT(), .PADDREXT(), .PWDATAEXT(), .PSTRBEXT(),
+    .PRDATAEXT('0), .PREADYEXT(1'b1),
+    .clk, .reset_ext, .reset, .HRDATAEXT,.HREADYEXT, .HRESPEXT, .HSELEXT,
     .HSELEXTSDC, .HCLK, .HRESETn, .HADDR, .HWDATA, .HWSTRB, .HWRITE, .HSIZE, .HBURST, .HPROT,
     .HTRANS, .HMASTLOCK, .HREADY, .TIMECLK(1'b0), .GPIOIN, .GPIOOUT, .GPIOEN,
     .UARTSin, .UARTSout, .SDCIntr);

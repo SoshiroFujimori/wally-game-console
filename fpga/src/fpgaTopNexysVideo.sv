@@ -9,7 +9,8 @@
 `include "config.vh"
 import cvw::*;
 
-module fpgaTop(input logic clk, resetn,
+module fpgaTop #(parameter logic RASTERIX_SUPPORTED = 0) (
+  input  logic        clk, resetn,
   input  logic [7:0]  GPI,
   output logic [7:0]  GPO,
   input  logic        UARTSin,
@@ -22,11 +23,13 @@ module fpgaTop(input logic clk, resetn,
   output logic [2:0]  DDR3BA,
   output logic        DDR3RASn, DDR3CASn, DDR3WEn, DDR3Resetn,
   output logic [0:0]  DDR3CKp, DDR3CKn, DDR3CKE, DDR3ODT,
-  output logic [1:0]  DDR3DM);
+  output logic [1:0]  DDR3DM,
+  output logic [2:0]  HDMITXp, HDMITXn,
+  output logic        HDMITXCLKp, HDMITXCLKn);
 
   `include "parameter-defs.vh"
 
-  logic               CPUCLK, DDRCLK, DDRRefCLK, DDRSysCLK;
+  logic               CPUCLK, DDRCLK, DDRRefCLK, DDRSysCLK, PixelCLK, SerialCLK;
   logic               ClockLocked, DDRCalibComplete, DDRSyncReset;
   logic               CPUReset, CPUResetn, DDRResetn;
   logic [31:0]         GPIOIN, GPIOOUT;
@@ -113,6 +116,47 @@ module fpgaTop(input logic clk, resetn,
   logic         DDRAXIRVALID;
   logic         DDRAXIRREADY;
 
+  logic               PixelResetn, PSELEXT, PENABLEEXT, PWRITEEXT, PREADYEXT;
+  logic [31:0]        PADDREXT;
+  logic [63:0]        PWDATAEXT, PRDATAEXT;
+  logic [7:0]         PSTRBEXT;
+  logic [3:0]         TMDS;
+  logic [3:0]    SharedAXIAWID;
+  logic [31:0]   SharedAXIAWADDR;
+  logic [7:0]    SharedAXIAWLEN;
+  logic [2:0]    SharedAXIAWSIZE;
+  logic [1:0]    SharedAXIAWBURST;
+  logic          SharedAXIAWLOCK;
+  logic [3:0]    SharedAXIAWCACHE;
+  logic [2:0]    SharedAXIAWPROT;
+  logic          SharedAXIAWVALID;
+  logic          SharedAXIAWREADY;
+  logic [63:0]   SharedAXIWDATA;
+  logic [7:0]    SharedAXIWSTRB;
+  logic          SharedAXIWLAST;
+  logic          SharedAXIWVALID;
+  logic          SharedAXIWREADY;
+  logic [3:0]    SharedAXIBID;
+  logic [1:0]    SharedAXIBRESP;
+  logic          SharedAXIBVALID;
+  logic          SharedAXIBREADY;
+  logic [3:0]    SharedAXIARID;
+  logic [31:0]   SharedAXIARADDR;
+  logic [7:0]    SharedAXIARLEN;
+  logic [2:0]    SharedAXIARSIZE;
+  logic [1:0]    SharedAXIARBURST;
+  logic          SharedAXIARLOCK;
+  logic [3:0]    SharedAXIARCACHE;
+  logic [2:0]    SharedAXIARPROT;
+  logic          SharedAXIARVALID;
+  logic          SharedAXIARREADY;
+  logic [3:0]    SharedAXIRID;
+  logic [63:0]   SharedAXIRDATA;
+  logic [1:0]    SharedAXIRRESP;
+  logic          SharedAXIRLAST;
+  logic          SharedAXIRVALID;
+  logic          SharedAXIRREADY;
+
   // Synchronize asynchronous inputs before the GPIO enable and UART loopback muxes.
   // ASYNC_REG keeps these stages together during placement.
   always_ff @(posedge CPUCLK) begin
@@ -146,6 +190,7 @@ module fpgaTop(input logic clk, resetn,
 
   wallypipelinedsoc #(P) wallypipelinedsoc(
     .clk(CPUCLK), .reset_ext(CPUReset), .reset(), .ExternalStall(1'b0),
+    .PSELEXT, .PENABLEEXT, .PWRITEEXT, .PADDREXT, .PWDATAEXT, .PSTRBEXT, .PRDATAEXT, .PREADYEXT,
     .HRDATAEXT, .HREADYEXT, .HRESPEXT, .HSELEXT, .HCLK(), .HRESETn(),
     .HADDR, .HWDATA, .HWSTRB(), .HWRITE, .HSIZE, .HBURST, .HPROT, .HTRANS,
     .HMASTLOCK(), .HREADY, .TIMECLK(1'b0), .GPIOIN, .GPIOOUT, .GPIOEN(),
@@ -191,19 +236,100 @@ module fpgaTop(input logic clk, resetn,
     .s_axi_rdata(CPUAXIRDATA), .s_axi_rresp(CPUAXIRRESP), .s_axi_rlast(CPUAXIRLAST),
     .s_axi_rvalid(CPUAXIRVALID), .s_axi_rready(CPUAXIRREADY), .m_axi_aclk(DDRCLK),
     .m_axi_aresetn(DDRResetn), .m_axi_awregion(), .m_axi_arregion(), .m_axi_awqos(),
-    .m_axi_arqos(), .m_axi_awid(DDRAXIAWID), .m_axi_awaddr(DDRAXIAWADDR),
-    .m_axi_awlen(DDRAXIAWLEN), .m_axi_awsize(DDRAXIAWSIZE), .m_axi_awburst(DDRAXIAWBURST),
-    .m_axi_awlock(DDRAXIAWLOCK), .m_axi_awcache(DDRAXIAWCACHE), .m_axi_awprot(DDRAXIAWPROT),
-    .m_axi_awvalid(DDRAXIAWVALID), .m_axi_awready(DDRAXIAWREADY), .m_axi_wdata(DDRAXIWDATA),
-    .m_axi_wstrb(DDRAXIWSTRB), .m_axi_wlast(DDRAXIWLAST), .m_axi_wvalid(DDRAXIWVALID),
-    .m_axi_wready(DDRAXIWREADY), .m_axi_bid(DDRAXIBID), .m_axi_bresp(DDRAXIBRESP),
-    .m_axi_bvalid(DDRAXIBVALID), .m_axi_bready(DDRAXIBREADY), .m_axi_arid(DDRAXIARID),
-    .m_axi_araddr(DDRAXIARADDR), .m_axi_arlen(DDRAXIARLEN), .m_axi_arsize(DDRAXIARSIZE),
-    .m_axi_arburst(DDRAXIARBURST), .m_axi_arlock(DDRAXIARLOCK),
-    .m_axi_arcache(DDRAXIARCACHE), .m_axi_arprot(DDRAXIARPROT),
-    .m_axi_arvalid(DDRAXIARVALID), .m_axi_arready(DDRAXIARREADY), .m_axi_rid(DDRAXIRID),
-    .m_axi_rdata(DDRAXIRDATA), .m_axi_rresp(DDRAXIRRESP), .m_axi_rlast(DDRAXIRLAST),
-    .m_axi_rvalid(DDRAXIRVALID), .m_axi_rready(DDRAXIRREADY));
+    .m_axi_arqos(), .m_axi_awid(SharedAXIAWID), .m_axi_awaddr(SharedAXIAWADDR),
+    .m_axi_awlen(SharedAXIAWLEN), .m_axi_awsize(SharedAXIAWSIZE), .m_axi_awburst(SharedAXIAWBURST),
+    .m_axi_awlock(SharedAXIAWLOCK), .m_axi_awcache(SharedAXIAWCACHE), .m_axi_awprot(SharedAXIAWPROT),
+    .m_axi_awvalid(SharedAXIAWVALID), .m_axi_awready(SharedAXIAWREADY), .m_axi_wdata(SharedAXIWDATA),
+    .m_axi_wstrb(SharedAXIWSTRB), .m_axi_wlast(SharedAXIWLAST), .m_axi_wvalid(SharedAXIWVALID),
+    .m_axi_wready(SharedAXIWREADY), .m_axi_bid(SharedAXIBID), .m_axi_bresp(SharedAXIBRESP),
+    .m_axi_bvalid(SharedAXIBVALID), .m_axi_bready(SharedAXIBREADY), .m_axi_arid(SharedAXIARID),
+    .m_axi_araddr(SharedAXIARADDR), .m_axi_arlen(SharedAXIARLEN), .m_axi_arsize(SharedAXIARSIZE),
+    .m_axi_arburst(SharedAXIARBURST), .m_axi_arlock(SharedAXIARLOCK),
+    .m_axi_arcache(SharedAXIARCACHE), .m_axi_arprot(SharedAXIARPROT),
+    .m_axi_arvalid(SharedAXIARVALID), .m_axi_arready(SharedAXIARREADY), .m_axi_rid(SharedAXIRID),
+    .m_axi_rdata(SharedAXIRDATA), .m_axi_rresp(SharedAXIRRESP), .m_axi_rlast(SharedAXIRLAST),
+    .m_axi_rvalid(SharedAXIRVALID), .m_axi_rready(SharedAXIRREADY));
+
+  // Optional RasterIX shares DDR3 through the existing external memory interface.
+  if (RASTERIX_SUPPORTED) begin : rasterixgen
+    logic VideoLocked;
+    // Reuse the buffered 100 MHz clock; the board input has one input buffer.
+    videoclock videoclock(
+      .clk_in1(DDRSysCLK), .reset(~resetn | ~ClockLocked), .locked(VideoLocked),
+      .clk_out1(PixelCLK), .clk_out2(SerialCLK));
+    // Synchronize DDR reset and calibration separately, before combining them.
+    // The board reset also resets videoclock; VideoLocked holds the display in reset.
+    sysrst pixelreset(
+      .slowest_sync_clk(PixelCLK), .ext_reset_in(DDRSyncReset), .aux_reset_in(~DDRCalibComplete),
+      .mb_debug_sys_rst(1'b0), .dcm_locked(VideoLocked),
+      .mb_reset(), .bus_struct_reset(), .peripheral_reset(),
+      .interconnect_aresetn(), .peripheral_aresetn(PixelResetn));
+    rasterix rasterix(
+      .CPUCLK, .CPUResetn, .DDRCLK, .DDRResetn, .PixelCLK, .SerialCLK, .PixelResetn,
+      .PSEL(PSELEXT), .PENABLE(PENABLEEXT), .PWRITE(PWRITEEXT), .PADDR(PADDREXT),
+      .PWDATA(PWDATAEXT), .PSTRB(PSTRBEXT), .PRDATA(PRDATAEXT), .PREADY(PREADYEXT), .TMDS,
+      .CPUAWID(SharedAXIAWID), .CPUAWADDR(SharedAXIAWADDR), .CPUAWLEN(SharedAXIAWLEN), .CPUAWSIZE(SharedAXIAWSIZE),
+      .CPUAWBURST(SharedAXIAWBURST), .CPUAWLOCK(SharedAXIAWLOCK), .CPUAWCACHE(SharedAXIAWCACHE), .CPUAWPROT(SharedAXIAWPROT),
+      .CPUAWVALID(SharedAXIAWVALID), .CPUAWREADY(SharedAXIAWREADY), .CPUWDATA(SharedAXIWDATA), .CPUWSTRB(SharedAXIWSTRB),
+      .CPUWLAST(SharedAXIWLAST), .CPUWVALID(SharedAXIWVALID), .CPUWREADY(SharedAXIWREADY), .CPUBID(SharedAXIBID),
+      .CPUBRESP(SharedAXIBRESP), .CPUBVALID(SharedAXIBVALID), .CPUBREADY(SharedAXIBREADY), .CPUARID(SharedAXIARID),
+      .CPUARADDR(SharedAXIARADDR), .CPUARLEN(SharedAXIARLEN), .CPUARSIZE(SharedAXIARSIZE), .CPUARBURST(SharedAXIARBURST),
+      .CPUARLOCK(SharedAXIARLOCK), .CPUARCACHE(SharedAXIARCACHE), .CPUARPROT(SharedAXIARPROT), .CPUARVALID(SharedAXIARVALID),
+      .CPUARREADY(SharedAXIARREADY), .CPURID(SharedAXIRID), .CPURDATA(SharedAXIRDATA), .CPURRESP(SharedAXIRRESP),
+      .CPURLAST(SharedAXIRLAST), .CPURVALID(SharedAXIRVALID), .CPURREADY(SharedAXIRREADY), .DDRAWID(DDRAXIAWID),
+      .DDRAWADDR(DDRAXIAWADDR), .DDRAWLEN(DDRAXIAWLEN), .DDRAWSIZE(DDRAXIAWSIZE), .DDRAWBURST(DDRAXIAWBURST),
+      .DDRAWLOCK(DDRAXIAWLOCK), .DDRAWCACHE(DDRAXIAWCACHE), .DDRAWPROT(DDRAXIAWPROT), .DDRAWVALID(DDRAXIAWVALID),
+      .DDRAWREADY(DDRAXIAWREADY), .DDRWDATA(DDRAXIWDATA), .DDRWSTRB(DDRAXIWSTRB), .DDRWLAST(DDRAXIWLAST),
+      .DDRWVALID(DDRAXIWVALID), .DDRWREADY(DDRAXIWREADY), .DDRBID(DDRAXIBID), .DDRBRESP(DDRAXIBRESP),
+      .DDRBVALID(DDRAXIBVALID), .DDRBREADY(DDRAXIBREADY), .DDRARID(DDRAXIARID), .DDRARADDR(DDRAXIARADDR),
+      .DDRARLEN(DDRAXIARLEN), .DDRARSIZE(DDRAXIARSIZE), .DDRARBURST(DDRAXIARBURST), .DDRARLOCK(DDRAXIARLOCK),
+      .DDRARCACHE(DDRAXIARCACHE), .DDRARPROT(DDRAXIARPROT), .DDRARVALID(DDRAXIARVALID), .DDRARREADY(DDRAXIARREADY),
+      .DDRRID(DDRAXIRID), .DDRRDATA(DDRAXIRDATA), .DDRRRESP(DDRAXIRRESP), .DDRRLAST(DDRAXIRLAST),
+      .DDRRVALID(DDRAXIRVALID), .DDRRREADY(DDRAXIRREADY));
+  end else begin : rasterixgen
+    assign PRDATAEXT = '0;
+    assign PREADYEXT = 1'b1;
+    assign TMDS = '0;
+    assign DDRAXIAWID = SharedAXIAWID;
+    assign DDRAXIAWADDR = SharedAXIAWADDR;
+    assign DDRAXIAWLEN = SharedAXIAWLEN;
+    assign DDRAXIAWSIZE = SharedAXIAWSIZE;
+    assign DDRAXIAWBURST = SharedAXIAWBURST;
+    assign DDRAXIAWLOCK = SharedAXIAWLOCK;
+    assign DDRAXIAWCACHE = SharedAXIAWCACHE;
+    assign DDRAXIAWPROT = SharedAXIAWPROT;
+    assign DDRAXIAWVALID = SharedAXIAWVALID;
+    assign SharedAXIAWREADY = DDRAXIAWREADY;
+    assign DDRAXIWDATA = SharedAXIWDATA;
+    assign DDRAXIWSTRB = SharedAXIWSTRB;
+    assign DDRAXIWLAST = SharedAXIWLAST;
+    assign DDRAXIWVALID = SharedAXIWVALID;
+    assign SharedAXIWREADY = DDRAXIWREADY;
+    assign SharedAXIBID = DDRAXIBID;
+    assign SharedAXIBRESP = DDRAXIBRESP;
+    assign SharedAXIBVALID = DDRAXIBVALID;
+    assign DDRAXIBREADY = SharedAXIBREADY;
+    assign DDRAXIARID = SharedAXIARID;
+    assign DDRAXIARADDR = SharedAXIARADDR;
+    assign DDRAXIARLEN = SharedAXIARLEN;
+    assign DDRAXIARSIZE = SharedAXIARSIZE;
+    assign DDRAXIARBURST = SharedAXIARBURST;
+    assign DDRAXIARLOCK = SharedAXIARLOCK;
+    assign DDRAXIARCACHE = SharedAXIARCACHE;
+    assign DDRAXIARPROT = SharedAXIARPROT;
+    assign DDRAXIARVALID = SharedAXIARVALID;
+    assign SharedAXIARREADY = DDRAXIARREADY;
+    assign SharedAXIRID = DDRAXIRID;
+    assign SharedAXIRDATA = DDRAXIRDATA;
+    assign SharedAXIRRESP = DDRAXIRRESP;
+    assign SharedAXIRLAST = DDRAXIRLAST;
+    assign SharedAXIRVALID = DDRAXIRVALID;
+    assign DDRAXIRREADY = SharedAXIRREADY;
+  end
+  for (genvar i=0; i<3; i++) begin : hdmi
+    OBUFDS #(.IOSTANDARD("TMDS_33")) data(.I(TMDS[i]), .O(HDMITXp[i]), .OB(HDMITXn[i]));
+  end
+  OBUFDS #(.IOSTANDARD("TMDS_33")) hdmiclock(.I(TMDS[3]), .O(HDMITXCLKp), .OB(HDMITXCLKn));
 
   // Dropping address bits [31:29] converts the selected physical address to a
   // byte offset in the 512 MiB device. Narrow AXI transfers remain enabled in MIG.

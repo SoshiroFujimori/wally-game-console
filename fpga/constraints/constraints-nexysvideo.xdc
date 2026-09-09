@@ -1,6 +1,6 @@
 ###########################################
 ## constraints-nexysvideo.xdc
-## Purpose: Nexys Video Rev. A board I/O for the Wally-only design.
+## Purpose: Nexys Video Rev. A board I/O for Wally with optional RasterIX video output.
 ## Pin source: Digilent/digilent-xdc, Nexys-Video-Master.xdc.
 ## DDR3 pin locations and PHY timing come from the MIG profile.
 ## SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
@@ -61,8 +61,20 @@ set_input_delay -clock $cpuClock -max 35.0 [get_ports SDCIn]
 set_input_delay -clock $cpuClock -min 0.0 [get_ports SDCIn]
 set_output_delay -clock $cpuClock -max 0.0 [get_ports {SDCCmd SDCCS SDCCLK}]
 set_output_delay -clock $cpuClock -min 0.0 [get_ports {SDCCmd SDCCS SDCCLK}]
-set_max_delay -datapath_only 10.0 -to [get_ports {SDCCmd SDCCS SDCCLK}]
+set_max_delay -datapath_only 10.0 -from $cpuClock -to [get_ports {SDCCmd SDCCS SDCCLK}]
 
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property CFGBVS VCCO [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS true [current_design]
+
+# HDMI output pairs from the Digilent Nexys Video master constraints.
+set_property -dict {PACKAGE_PIN T1 IOSTANDARD TMDS_33} [get_ports HDMITXCLKp]
+set_property -dict {PACKAGE_PIN U1 IOSTANDARD TMDS_33} [get_ports HDMITXCLKn]
+set_property -dict {PACKAGE_PIN W1 IOSTANDARD TMDS_33} [get_ports {HDMITXp[0]}]
+set_property -dict {PACKAGE_PIN Y1 IOSTANDARD TMDS_33} [get_ports {HDMITXn[0]}]
+set_property -dict {PACKAGE_PIN AA1 IOSTANDARD TMDS_33} [get_ports {HDMITXp[1]}]
+set_property -dict {PACKAGE_PIN AB1 IOSTANDARD TMDS_33} [get_ports {HDMITXn[1]}]
+set_property -dict {PACKAGE_PIN AB3 IOSTANDARD TMDS_33} [get_ports {HDMITXp[2]}]
+set_property -dict {PACKAGE_PIN AB2 IOSTANDARD TMDS_33} [get_ports {HDMITXn[2]}]
+# TMDS has no synchronous external capture clock; internal serializer paths remain timed.
+set_false_path -to [get_ports {HDMITXp[*] HDMITXn[*] HDMITXCLKp HDMITXCLKn}]

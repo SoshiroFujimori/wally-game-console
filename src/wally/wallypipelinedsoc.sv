@@ -49,6 +49,13 @@ module wallypipelinedsoc import cvw::*; #(parameter cvw_t P)  (
   output logic [1:0]          HTRANS,
   output logic                HMASTLOCK,
   output logic                HREADY,
+  // External APB peripheral interface; all signals use the SoC clock.
+  output logic                PSELEXT, PENABLEEXT, PWRITEEXT,
+  output logic [31:0]         PADDREXT,
+  output logic [P.XLEN-1:0]   PWDATAEXT,
+  output logic [P.XLEN/8-1:0] PSTRBEXT,
+  input  logic [P.XLEN-1:0]   PRDATAEXT,
+  input  logic                PREADYEXT,
   // I/O Interface
   input  logic                TIMECLK,          // optional for CLINT MTIME counter
   input  logic [31:0]         GPIOIN,           // inputs from GPIO
@@ -88,11 +95,13 @@ module wallypipelinedsoc import cvw::*; #(parameter cvw_t P)  (
   if (P.BUS_SUPPORTED) begin : uncoregen // Hack to work around Verilator bug https://github.com/verilator/verilator/issues/4769
     uncore #(P) uncore(.HCLK, .HRESETn, .TIMECLK,
       .HADDR, .HWDATA, .HWSTRB, .HWRITE, .HSIZE, .HBURST, .HPROT, .HTRANS, .HMASTLOCK, .HRDATAEXT,
+      .PSELEXT, .PENABLEEXT, .PWRITEEXT, .PADDREXT, .PWDATAEXT, .PSTRBEXT, .PRDATAEXT, .PREADYEXT,
       .HREADYEXT, .HRESPEXT, .HRDATA, .HREADY, .HRESP, .HSELEXT,
       .MTimerInt, .MSwInt, .MExtInt, .SExtInt, .GPIOIN, .GPIOOUT, .GPIOEN, .UARTSin,
       .UARTSout, .MTIME_CLINT, .SPIIn, .SPIOut, .SPICS, .SPICLK, .SDCIn, .SDCCmd, .SDCCS, .SDCCLK, .PWMGPIO);
   end else begin
     assign {HRDATA, HREADY, HRESP, HSELEXT, MTimerInt, MSwInt, MExtInt, SExtInt,
+            PSELEXT, PENABLEEXT, PWRITEEXT, PADDREXT, PWDATAEXT, PSTRBEXT,
             MTIME_CLINT, GPIOOUT, GPIOEN, UARTSout, SPIOut, SPICS, SPICLK, SDCCmd, SDCCS, SDCCLK, PWMGPIO} = '0;
   end
 
