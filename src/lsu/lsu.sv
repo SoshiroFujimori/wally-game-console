@@ -274,8 +274,9 @@ module lsu import cvw::*;  #(parameter cvw_t P) (
   /////////////////////////////////////////////////////////////////////////////////////////////
 
   // Pause IEU memory request if TLB miss.  After TLB fill, replay request.
-  // Discard memory request on pipeline flush
-  assign LSUFlushW = HPTWFlushW | FlushW;
+  // Block faulting accesses even when an in-flight instruction fetch delays TrapM.
+  assign LSUFlushW = HPTWFlushW | FlushW | LSULoadPageFaultM | LSUStoreAmoPageFaultM |
+                     LSULoadAccessFaultM | LSUStoreAmoAccessFaultM;
 
   if (P.DTIM_SUPPORTED) begin : dtim
     logic [P.PA_BITS-1:0] DTIMAdr;
