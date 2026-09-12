@@ -71,10 +71,10 @@ public:
     uint32_t frameAddress() const { return regs[5]; }
     void waitForFrame(uint32_t previous) const {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        // Avoid sleep granularity delaying work for the next display frame.
         while (frameCount() == previous) {
             if (std::chrono::steady_clock::now() > deadline)
                 throw std::runtime_error("RasterIX display swap timeout");
-            usleep(1000);
         }
     }
 private:
