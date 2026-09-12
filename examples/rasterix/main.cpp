@@ -29,6 +29,9 @@ int main(int argc, char** argv) {
         auto device = std::make_unique<rr::threadedvertextransformer::ThreadedVertexTransformer>(uploader, worker, transfer);
         if (!rr::RIXGL::createInstance(*device)) throw std::runtime_error("Cannot create OpenGL context");
         auto& gl = rr::RIXGL::getInstance();
+        // Resolution changes flush the initial list; clear stale internal pixels first.
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
         if (!gl.setRenderResolution(640, 480)) throw std::runtime_error("Unsupported resolution");
         const bool cube = std::strcmp(scene, "cube") == 0;
         Minimal cubeScene;
@@ -43,7 +46,7 @@ int main(int argc, char** argv) {
         }
         std::printf("RasterIX scene=%s frames=%u resolution=640x480\n", scene, frames);
         std::fflush(stdout);
-        for (unsigned frame = 0; frame < frames; ++frame) {
+        const auto present = [&] {
             if (cube) cubeScene.draw();
             else {
                 glClearColor(!std::strcmp(scene, "red") ? 1.0f : 0.0f,
@@ -62,6 +65,12 @@ int main(int argc, char** argv) {
             gl.swapDisplayList();
             bus.waitForFrame(previous);
             if (glGetError() != GL_NO_ERROR) throw std::runtime_error("OpenGL error");
+        };
+        // Upstream starts with the first buffer twice. Initialize both buffers
+        // before the requested frames so even a short run has a valid exit image.
+        for (unsigned frame = 0; frame < 3; ++frame) present();
+        for (unsigned frame = 0; frame < frames; ++frame) {
+            present();
             if (frame == 0 || frame + 1 == frames || (frame + 1) % 30 == 0) {
                 std::printf("Frame %u displayed: count=%u address=0x%08x\n", frame + 1,
                             bus.frameCount(), bus.frameAddress());
