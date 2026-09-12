@@ -3,6 +3,7 @@
 // Draw the 2D Breakout scene with the upstream OpenGL interface.
 #pragma once
 #include "Breakout.hpp"
+#include "BreakoutDamage.hpp"
 #include "gl.h"
 #include <stdexcept>
 
@@ -26,30 +27,49 @@ class Renderer {
     }
 
     void draw(const Scene& current) {
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_BLEND);
-        glBegin(GL_QUADS);
-        for (const auto& rect : current.rects) {
-            color(rect.color);
-            quad(rect.x, rect.y, rect.w, rect.h);
-        }
-        glEnd();
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glBindTexture(GL_TEXTURE_2D, font);
-        glBegin(GL_QUADS);
-        for (const auto& item : current.glyphs) {
-            drawGlyph(item);
-        }
-        glEnd();
-        glDisable(GL_BLEND);
-        glDisable(GL_TEXTURE_2D);
+        const unsigned slot = drawn % 2;
+        // Upstream starts with LOC_1 twice, then alternates LOC_2 and LOC_1.
+        // Three full draws initialize both physical buffers and history slots.
+        if (drawn < 3)
+            drawScene(current, true);
+        else
+            drawScene(damageScene(previous[slot], current), false);
+        previous[slot] = current;
+        ++drawn;
     }
 
   private:
+    void drawScene(const Scene& current, bool clear) {
+        if (clear) {
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_BLEND);
+        if (!current.rects.empty()) {
+            glBegin(GL_QUADS);
+            for (const auto& rect : current.rects) {
+                color(rect.color);
+                quad(rect.x, rect.y, rect.w, rect.h);
+            }
+            glEnd();
+        }
+        if (!current.glyphs.empty()) {
+            glEnable(GL_TEXTURE_2D);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBindTexture(GL_TEXTURE_2D, font);
+            glBegin(GL_QUADS);
+            for (const auto& item : current.glyphs)
+                drawGlyph(item);
+            glEnd();
+            glDisable(GL_BLEND);
+            glDisable(GL_TEXTURE_2D);
+        }
+    }
+    std::array<Scene, 2> previous;
+    uint64_t drawn = 0;
+
     static void color(uint32_t rgb) { glColor4ub((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, 255); }
     static void quad(float x, float y, float width, float height, float u = 0, float v = 0, float du = 0,
                      float dv = 0) {
