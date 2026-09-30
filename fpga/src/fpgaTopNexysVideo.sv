@@ -1,6 +1,6 @@
 ///////////////////////////////////////////
 // fpgaTopNexysVideo.sv
-// Written: SoshiroFujimori <oshima.k.kondate@gmail.com> 8 September 2026
+// Written: Codex <codex@openai.com> 8 September 2026
 // Purpose: Wally, DDR3, UART, GPIO, and SPI-mode microSD on the Nexys Video.
 // A component of the CORE-V-WALLY configurable RISC-V project.
 // SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
