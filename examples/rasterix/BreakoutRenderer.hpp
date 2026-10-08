@@ -91,7 +91,7 @@ class Renderer {
              float((slot / 8) * 8) / 32, 8.0f / 64, 8.0f / 32);
     }
     void createFont() {
-        // The fixed vocabulary fits one 4096-byte RGBA4444 texture page.
+        // The fixed vocabulary uses a 64x32 RGBA4444 texture (4096 bytes).
         constexpr char characters[] = " 0123456789ABCDEGIKLMORSTUVWY";
         static_assert(sizeof(characters) - 1 <= 32);
         slots.fill(255);

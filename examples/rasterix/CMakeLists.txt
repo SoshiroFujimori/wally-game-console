@@ -18,6 +18,8 @@ set(RIX_CORE_COLOR_BUFFER_LOC_1 0x01e00000 CACHE STRING "First framebuffer")
 set(RIX_CORE_COLOR_BUFFER_LOC_2 0x01c00000 CACHE STRING "Second framebuffer")
 set(RIX_CORE_DEPTH_BUFFER_LOC 0x01a00000 CACHE STRING "Depth buffer")
 set(RIX_CORE_STENCIL_BUFFER_LOC 0x01800000 CACHE STRING "Stencil buffer")
+# Match the texture page size of the upstream RasterIX_IF hardware.
+set(RIX_CORE_TEXTURE_PAGE_SIZE 2048 CACHE STRING "Texture page bytes")
 set(RIX_CORE_NUMBER_OF_TEXTURE_PAGES 4096 CACHE STRING "Texture pages")
 set(RIX_CORE_NUMBER_OF_TEXTURES 256 CACHE STRING "Texture objects")
 add_subdirectory(../../addins/rasterix rasterix)
