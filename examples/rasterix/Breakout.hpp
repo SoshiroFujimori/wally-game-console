@@ -217,6 +217,14 @@ inline void addText(Scene& out, int x, int y, const std::string& text, int scale
         x += 6 * scale;
     }
 }
+// Glyphs are five pixels wide with a one-pixel gap; omit the final gap.
+inline int textWidth(const std::string& text, int scale = 2) {
+    return text.empty() ? 0 : (6 * int(text.size()) - 1) * scale;
+}
+inline void addCenteredText(Scene& out, int y, const std::string& text, int scale = 2,
+                            uint32_t color = 0xffffff) {
+    addText(out, (Width - textWidth(text, scale)) / 2, y, text, scale, color);
+}
 inline Scene scene(const Game& g) {
     Scene out;
     out.rects.reserve(60);
@@ -232,15 +240,20 @@ inline Scene scene(const Game& g) {
         }
     out.rects.push_back({g.paddle / Q - PaddleWidth / 2, 438, PaddleWidth, 12, 0xffffff});
     out.rects.push_back({g.x / Q - Radius, g.y / Q - Radius, Radius * 2, Radius * 2, 0xffffff});
-    addText(out, 24, 16, "SCORE " + std::to_string(g.score));
-    addText(out, 440, 16, "LIVES " + std::to_string(g.lives));
-    addText(out, 230, 462, "WALLY BREAKOUT", 1, 0x00ffff);
+    // Center the 7-pixel glyphs within the header, footer and playing area.
+    constexpr int HudY = (44 - 7 * 2) / 2;
+    constexpr int FooterY = (454 + Height - 7 * 2) / 2;
+    constexpr int MessageY = (48 + 454 - 7 * 3) / 2;
+    const std::string lives = "LIVES " + std::to_string(g.lives);
+    addText(out, 24, HudY, "SCORE " + std::to_string(g.score));
+    addText(out, Width - 24 - textWidth(lives), HudY, lives);
+    addCenteredText(out, FooterY, "WALLY BREAKOUT", 2, 0x00ffff);
     if (g.phase == Phase::Ready)
-        addText(out, 278, 284, "READY", 3, 0xffff00);
+        addCenteredText(out, MessageY, "READY", 3, 0xffff00);
     if (g.phase == Phase::Clear)
-        addText(out, 276, 284, "CLEAR", 3, 0x00ff00);
+        addCenteredText(out, MessageY, "CLEAR", 3, 0x00ff00);
     if (g.phase == Phase::GameOver)
-        addText(out, 230, 284, "GAME OVER", 3, 0xff0000);
+        addCenteredText(out, MessageY, "GAME OVER", 3, 0xff0000);
 
     return out;
 }
