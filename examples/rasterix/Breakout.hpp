@@ -240,14 +240,13 @@ inline Scene scene(const Game& g) {
         }
     out.rects.push_back({g.paddle / Q - PaddleWidth / 2, 438, PaddleWidth, 12, 0xffffff});
     out.rects.push_back({g.x / Q - Radius, g.y / Q - Radius, Radius * 2, Radius * 2, 0xffffff});
-    // Center the 7-pixel glyphs within the header, footer and playing area.
+    // Center the 7-pixel glyphs within the header and playing area.
     constexpr int HudY = (44 - 7 * 2) / 2;
-    constexpr int FooterY = (454 + Height - 7 * 2) / 2;
     constexpr int MessageY = (48 + 454 - 7 * 3) / 2;
     const std::string lives = "LIVES " + std::to_string(g.lives);
     addText(out, 24, HudY, "SCORE " + std::to_string(g.score));
     addText(out, Width - 24 - textWidth(lives), HudY, lives);
-    addCenteredText(out, FooterY, "WALLY BREAKOUT", 2, 0x00ffff);
+    addCenteredText(out, HudY, "WALLY BREAKOUT", 2, 0x00ffff);
     if (g.phase == Phase::Ready)
         addCenteredText(out, MessageY, "READY", 3, 0xffff00);
     if (g.phase == Phase::Clear)
